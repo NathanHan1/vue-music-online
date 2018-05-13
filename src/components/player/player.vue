@@ -66,7 +66,7 @@
         </div>
       </div>
     </transition>
-    <audio ref="audio" :src="currentSong.url"></audio>
+    <audio ref="audio"></audio>
   </div>
 </template>
 
@@ -168,10 +168,12 @@ export default{
       ])
     },
     watch: {
-      currentSong() {
-        this.$nextTick(() => {
-          this.$refs.audio.play()
-        })
+      currentSong(newSong, oldSong) {
+        if (!newSong.id || !newSong.url || newSong.id === oldSong.id) {
+          return
+        }
+        this.$refs.audio.src = newSong.url
+        this.$refs.audio.play()
       },
       playing(newPlaying) {
         const audio = this.$refs.audio
