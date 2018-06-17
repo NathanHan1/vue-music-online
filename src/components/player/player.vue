@@ -30,7 +30,7 @@
           <div class="progress-wrapper">
             <span class="time tiem-l">{{format(currentTime)}}</span>
             <div class="progress-bar-wrapper">
-              <progress-bar :percent="percent"></progress-bar>
+              <progress-bar :percent="percent" @percentchange="percentchange"></progress-bar>
             </div>
             <span class="time time-r">{{format(currentSong.duration)}}</span>
           </div>
@@ -207,6 +207,13 @@ export default{
           x,
           y,
           scale
+        }
+      },
+      percentchange(percent) {
+        const currentTime = this.currentSong.duration * percent
+        this.$refs.audio.currentTime = currentTime
+        if (!this.playing) {
+          this.togglePlaying()
         }
       },
       ...mapMutations({
