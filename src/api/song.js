@@ -81,3 +81,23 @@ function genUrlMid(mids, types) {
     }
   }
 }
+
+export function getLyric(mid) {
+  const url = debug ? 'api/lyric' : 'http://hanzhibang.cn/music/api/lyric'
+
+  const data = Object.assign({}, commonParams, {
+    songmid: mid,
+    platform: 'yqq',
+    hostUin: 0,
+    needNewCode: 0,
+    categoryId: 10000000,
+    pcachetime: +new Date(),
+    format: 'json'
+  })
+
+  return axios(url, {
+    params: data
+  }).then((res) => {
+    return Promise.resolve(res.data)
+  })
+}

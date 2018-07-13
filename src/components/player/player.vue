@@ -17,14 +17,36 @@
           <h1 class="title" v-html="currentSong.name"></h1>
           <h2 class="subtitle" v-html="currentSong.singer"></h2>
         </div>
-        <div class="middle">
-          <div class="middle-l">
-            <div class="cd-wrapper" ref="cdWrapper">
-              <div class="cd" ref="imageWrapper" :class="cdCls">
-                <img ref="image" class="image" :src="currentSong.image">
+        <div class="middle" @click="toggleCD">
+          <transition name="cd">
+            <div class="middle-l" v-show="currentCD" >
+              <div class="cd-wrapper" ref="cdWrapper">
+                <div class="cd" ref="imageWrapper" :class="cdCls">
+                  <img ref="image" class="image" :src="currentSong.image">
+                </div>
+              </div>
+              <div class="playing-lyric-wrapper">
+                <div class="playing-lyric">{{playingLyric}}</div>
               </div>
             </div>
-          </div>
+          </transition>
+          <transition name="lyric">
+            <scroll class="middle-r" 
+            ref="lyricList" 
+            :data="currentLyric && currentLyric.lines"
+            v-show="!currentCD"
+            >
+            <div class="lyric-wrapper">
+              <div v-if="currentLyric">
+                <p ref="lyricLine"
+                   class="text"
+                   v-for="(line, index) in currentLyric.lines"
+                   :class="{'current': currentNum === index}"
+                >{{line.txt}}</p>
+              </div>
+            </div>
+            </scroll>
+          </transition> 
         </div>
         <div class="bottom">
           <div class="progress-wrapper">
@@ -35,8 +57,8 @@
             <span class="time time-r">{{format(currentSong.duration)}}</span>
           </div>
           <div class="operators">
-            <div class="icon i-left">
-              <i class="icon-sequence"></i>
+            <div class="icon i-left" @click="setplaymode">
+              <i :class="iconMode"></i>
             </div>
             <div class="icon i-left" :class="disableCls">
               <i class="icon-prev" @click.stop="prevSong"></i>
@@ -66,14 +88,16 @@
           <p class="desc" v-html="currentSong.singer"></p>
         </div>
         <div class="control">
-          <i @click.stop="togglePlaying" :class="playIconMini"></i>
+          <progress-circle :radius="32" :percent="percent">
+            <i @click.stop="togglePlaying" class="icon-mini" :class="playIconMini"></i>
+          </progress-circle>
         </div>
         <div class="control">
           <i class="icon-playlist"></i>
         </div>
       </div>
     </transition>
-    <audio ref="audio" @canplay="ready" @error="error" @timeupdate="time"></audio>
+    <audio ref="audio" @canplay="ready" @error="error" @timeupdate="time" @ended="ended"></audio>
   </div>
 </template>
 
@@ -82,6 +106,11 @@ import {mapGetters, mapMutations} from 'vuex'
 import animations from 'create-keyframe-animation'
 import {prefixStyle} from 'common/js/dom'
 import ProgressBar from 'base/progress-bar/progress-bar'
+import ProgressCircle from 'base/progress-circle/progress-circle'
+import {playMode} from 'common/js/config'
+import {shuffle} from 'common/js/util'
+import Lyric from 'lyric-parser'
+import Scroll from 'base/scroll/scroll'
 
 const transform = prefixStyle('transform')
 
@@ -89,7 +118,11 @@ export default{
     data() {
       return {
         isReady: false,
-        currentTime: 0
+        currentTime: 0,
+        currentLyric: null,
+        currentNum: 0,
+        currentCD: true,
+        playingLyric: ''
       }
     },
     methods: {
@@ -108,6 +141,9 @@ export default{
       time(t) {
         this.currentTime = t.target.currentTime
       },
+      toggleCD() {
+        this.currentCD = !this.currentCD
+      },
       _pad(num, n = 2) {
         let length = num.toString().length
         while (length < n) {
@@ -116,12 +152,69 @@ export default{
         }
         return num
       },
+      getLyric() {
+        this.currentSong.getLyric().then((lyric) => {
+          this.currentLyric = new Lyric(lyric, this.handleLyric)
+          if (this.playing) {
+            this.currentLyric.play()
+          }
+        }).catch(() => {
+          this.currentLyric = null
+          this.currentNum = 0
+          this.playingLyric = ''
+        })
+      },
+      handleLyric({lineNum, txt}) {
+        this.currentNum = lineNum
+        if (lineNum > 5) {
+          let lineEl = this.$refs.lyricLine[lineNum - 5]
+          this.$refs.lyricList.scrollToElement(lineEl, 1000)
+        } else {
+          this.$refs.lyricList.scrollTo(0, 0, 1000)
+        }
+        this.playingLyric = txt
+      },
+      setplaymode() {
+        const mode = (this.mode + 1) % 3
+        this.setMode(mode)
+        let list = null
+        if (this.mode === playMode.random) {
+          list = shuffle(this.sequenceList)
+        } else {
+          list = this.sequenceList
+        }
+        this.resetCurrentIndex(list)
+        this.setPlayList(list)
+      },
+      resetCurrentIndex(list) {
+        let index = list.findIndex((item) => {
+          return item.id === this.currentSong.id
+        })
+        this.setCurrentIndex(index)
+      },
+      ended() {
+        if (this.mode === playMode.loop) {
+          this.loop()
+        } else {
+          this.nextSong()
+        }
+      },
+      loop() {
+        if (this.currentLyric) {
+          this.currentLyric.seek(0)
+        }
+        this.$refs.audio.currentTime = 0
+        this.$refs.audio.play()
+      },
       format(t) {
         let minute = (t / 60) | 0
         let second = this._pad((t % 60) | 0)
         return `${minute}:${second}`
       },
       togglePlaying() {
+        if (this.currentLyric) {
+          this.currentLyric.togglePlay()
+        }
         this.setPlayingState(!this.playing)
       },
       enter(el, done) {
@@ -137,7 +230,6 @@ export default{
             transform: `transform3d(0, 0, 0) scale(1)`
           }
         }
-
         animations.registerAnimation({
           name: 'move',
           animation,
@@ -215,19 +307,31 @@ export default{
         if (!this.playing) {
           this.togglePlaying()
         }
+        if (this.currentLyric) {
+          this.currentLyric.seek(currentTime * 1000)
+        }
       },
       ...mapMutations({
         setFullScreen: 'SET_FULL_SCREEN',
         setPlayingState: 'SET_PLAYING_STATE',
-        setCurrentIndex: 'SET_CURRENT_INDEX'
+        setCurrentIndex: 'SET_CURRENT_INDEX',
+        setMode: 'SET_PLAY_MODE',
+        setPlayList: 'SET_PLAYLIST'
       })
     },
     computed: {
+      onlyric() {
+        return this.currentLyric
+      },
       playIcon() {
         return this.playing ? 'icon-pause' : 'icon-play'
       },
       playIconMini() {
         return this.playing ? 'icon-pause-mini' : 'icon-play-mini'
+      },
+      iconMode() {
+        return this.mode === playMode.sequence ? 'icon-sequence' : this.mode === playMode.random
+        ? 'icon-random' : 'icon-loop'
       },
       disableCls() {
         return this.isReady ? '' : 'disable'
@@ -243,7 +347,9 @@ export default{
           'playList',
           'currentSong',
           'playing',
-          'currentIndex'
+          'currentIndex',
+          'mode',
+          'sequenceList'
       ])
     },
     watch: {
@@ -251,8 +357,12 @@ export default{
         if (!newSong.id || !newSong.url || newSong.id === oldSong.id) {
           return
         }
+        if (this.currentLyric) {
+          this.currentLyric.stop()
+        }
         this.$refs.audio.src = newSong.url
         this.$refs.audio.play()
+        this.getLyric()
       },
       playing(newPlaying) {
         const audio = this.$refs.audio
@@ -262,7 +372,9 @@ export default{
       }
     },
     components: {
-      ProgressBar
+      ProgressBar,
+      ProgressCircle,
+      Scroll
     }
 }
 </script>
@@ -511,6 +623,14 @@ export default{
           left: 0
           top: 0
 
+    .cd-enter-active, .cd-leave-active
+        transition: all 0.2s
+    .cd-enter, .cd-leave-to
+        opacity: 0
+    .lyric-enter-active, .lyric-leave-active
+        transition: all 0.2s
+    .lyric-enter, .lyric-leave-to
+        opacity: 0
   @keyframes rotate
     0%
       transform: rotate(0)

@@ -45,6 +45,7 @@ const devWebpackConfig = merge(baseWebpackConfig, {
 
       app.get('/api/getCdInfo', function (req, res) {
         const url = 'https://c.y.qq.com/qzone/fcg-bin/fcg_ucc_getcdinfo_byids_cp.fcg'
+
         axios.get(url, {
           headers: {
             referer: 'https://c.y.qq.com/',
@@ -57,7 +58,7 @@ const devWebpackConfig = merge(baseWebpackConfig, {
             const reg = /^\w+\(({.+})\)$/
             const matches = ret.match(reg)
             if (matches) {
-              ret = JSON.parse(matches[1])
+               ret = JSON.parse(matches[1])
             }
           }
           res.json(ret)

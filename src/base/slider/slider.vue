@@ -95,11 +95,9 @@ import BScroll from 'better-scroll'
       for (let i = 0; i < this.children.length; i++) {
         let child = this.children[i]
         addClass(child, 'slider-item')
-
         child.style.width = sliderWidth + 'px'
         width += sliderWidth
       }
-
       if (this.loop && !isResize) {
         width += 2 * sliderWidth
       }

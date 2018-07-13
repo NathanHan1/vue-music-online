@@ -30,12 +30,6 @@ export default {
     },
     created() {
         this._getdetail()
-        this.$nextTick(() => {
-            console.log(this.songs)
-        })
-    },
-    mounted() {
-        window.vue = this
     },
     methods: {
         _getdetail() {

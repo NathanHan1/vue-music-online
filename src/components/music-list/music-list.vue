@@ -3,12 +3,13 @@
         <div class="back" @click="_back">
             <i class="icon-back"></i>
         </div>
-        <scroll :data="songs" @scroll="scroll" :listen-scroll="listenScroll" :probe-type="probeType" class="list">
+        <scroll :data="songs" @scroll="scroll" :listen-scroll="listenScroll" :probe-type="probeType" class="list"
+        ref="list">
             <div>
                 <h1 class="title" v-html="title"></h1>
                 <div class="bg-image" :style="image" ref="bgImage">
-                    <div class="play-wrapper" v-show="songs.length > 0">
-                        <div class="play">
+                    <div class="play-wrapper">
+                        <div class="play" @click="random" v-show="songs.length > 0">
                             <i class="icon-play"></i>
                             <span class="text">随机播放全部</span>
                         </div>
@@ -16,7 +17,7 @@
                     <div class="filter" ref="filter"></div>
                 </div>
                 <div class="song-list-wrapper">
-                    <song-list @select="selectItem" :songs="songs"></song-list>
+                    <song-list @select="selectItem" :songs="songs" :isrank="isrank"></song-list>
                 </div>
             </div>
         </scroll>
@@ -32,9 +33,11 @@
 import Scroll from 'base/scroll/scroll'
 import SongList from 'base/song-list/song-list'
 import Loading from 'base/loading/loading'
-import {mapActions} from 'vuex'
+import {mapActions, mapGetters} from 'vuex'
+import {playListMixin} from 'common/js/mixin'
 
-export default{
+export default {
+    mixins: [playListMixin],
     props: {
         bgImage: {
             type: String,
@@ -47,6 +50,10 @@ export default{
         title: {
             type: String,
             default: ''
+        },
+        isrank: {
+            type: Boolean,
+            default: false
         }
     },
     data() {
@@ -62,7 +69,10 @@ export default{
         },
         top() {
             return `top:${this.imageHeight}px;height:${this.clientHeight}px`
-        }
+        },
+        ...mapGetters([
+            'playList'
+        ])
     },
     created() {
       this.probeType = 3
@@ -73,20 +83,31 @@ export default{
       this.clientHeight = this.$refs.client.clientHeight - this.imageHeight
     },
     methods: {
+        handlePlayList(playlist) {
+            const bottom = playlist.length > 0 ? '60px' : ''
+            this.$refs.list.$el.style.bottom = bottom
+            this.$refs.list.refresh()
+        },
         _back() {
             this.$router.back()
         },
         scroll(pos) {
             this.scrollY = pos.y
         },
-        selectItem(item, index) {
+        selectItem(index) {
             this.selectPlay({
                 list: this.songs,
                 index: index
             })
         },
+        random() {
+            this.randomPlay({
+                list: this.songs
+            })
+        },
         ...mapActions([
-            'selectPlay'
+            'selectPlay',
+            'randomPlay'
         ])
     },
     components: {
@@ -97,10 +118,9 @@ export default{
 }
 </script>
 
-<style lang="stylus" rel="stylesheet/stylus">
+<style scoped lang="stylus" rel="stylesheet/stylus">
   @import "~common/stylus/variable"
   @import "~common/stylus/mixin"
-
   .music-list
     position: fixed
     z-index: 100

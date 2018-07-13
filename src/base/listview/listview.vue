@@ -42,7 +42,7 @@ import Loading from 'base/loading/loading'
 const ANCHOR_HEIGHT = 18
 const TITLE_HEIGHT = 30
 
-export default{
+export default {
     props: {
       data: {
         type: Array,
@@ -76,6 +76,9 @@ export default{
       this.listHeight = []
     },
     methods: {
+      callrefresh() {
+        this.$refs.listview.refresh()
+      },
       selectItem(item) {
         this.$emit('select', item)
       },

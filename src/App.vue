@@ -3,7 +3,9 @@
 		<m-header></m-header>
 		<tab></tab>
 		<keep-alive>
-            <router-view></router-view>
+			<transition name="slide">
+            	<router-view></router-view>
+			</transition>
         </keep-alive>
         <player></player>
 	</div>
@@ -24,5 +26,8 @@ export default {
 </script>
 
 <style lang="stylus" rel="stylesheet/stylus">
-
+	.slide-enter-active, .slide-leave-active
+		transition: all .5s
+	.slide-enter, .slide-leave-to
+		opacity: 0
 </style>
