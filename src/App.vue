@@ -2,11 +2,11 @@
 	<div id="app">
 		<m-header></m-header>
 		<tab></tab>
-		<keep-alive>
-			<transition name="slide">
-            	<router-view></router-view>
-			</transition>
-        </keep-alive>
+		<transition name="slide">
+			<keep-alive>
+        		<router-view></router-view>
+			</keep-alive>
+		</transition>
         <player></player>
 	</div>
 </template>
